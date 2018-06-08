@@ -1,0 +1,174 @@
+---
+title: "Indonesian Aquaculture Data Visualization"
+author: "UCSB"
+output: html_document
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+
+###Purpose
+
+As part of our work towards Activity 3, we have have begun to examine the spatial patterns and trends in the Indonesian aquaculture statistics. We have prepared several visuals to give our colleagues an idea of the types of figures that could be included in the Indonesia-specific section of the whitepaper. We welcome any thoughts or feedback and also hope to get a sense for how well the data align with stakeholders' perceptions of the aquaculture industry.  
+
+```{r setup, include = F}
+library(tidyverse)
+library(sf)
+library(viridis)
+library(scales)
+library(RcppRoll)
+
+# Read shapefile
+indo <- st_read(dsn = "Data/IDN_adm_shp", layer = "IDN_adm1")
+# Simplify shapefile
+indo <- st_simplify(indo, dTolerance = 0.01)
+# Production and area data
+aqua <- read_csv(file = "Data/indo_aqua_stats.csv", na = c("-"))
+#Correct for Papua Barat/Irian Jaya Barat
+levels(indo$NAME_1)<- c(levels(indo$NAME_1), "Papua Barat")
+indo[which(indo$NAME_1 == "Irian Jaya Barat"), grep("^NAME_1$", colnames(indo))] <- "Papua Barat"
+```
+
+```{r data tidying}
+# Process data into long format
+aqua <- aqua %>% 
+  gather(key = 'year', value = 'value', 4:ncol(.)) %>% 
+  spread(metric, value) %>% 
+  mutate(area_hectares = as.numeric(gsub('\\.', '', area_hectares)),
+         tons          = as.numeric(gsub('\\.', '', tons)),
+         tons_per_ha   = tons / area_hectares,
+         NAME_1 = factor(province))
+```
+
+```{r summary stats}
+# Area of brackish water ponds
+area_map <- aqua %>% 
+  dplyr::filter(year == 2015 & type == 'brackish pond') %>% 
+  select(NAME_1, area_hectares) 
+
+# Intensity of brackish pond production
+brack_intensity_map <- aqua %>% 
+  dplyr::filter(year == 2015 & type == 'brackish pond') %>% 
+  select(NAME_1, tons_per_ha) %>% 
+  mutate(tons_per_ha = ifelse(tons_per_ha > 1000, NA, tons_per_ha))
+
+# Intensity of Marine culture
+marine_intensity_map <- aqua %>% 
+  dplyr::filter(year == 2015 & type == 'marine culture') %>% 
+  select(NAME_1, tons_per_ha)
+
+#Production of cage/raft aquaculture
+
+#With NAs
+prod_map <- aqua %>% 
+  dplyr::filter(year == 2015 & type %in% c("cage", "floating cage net")) %>% 
+  select(NAME_1, type, tons) %>% 
+  group_by(NAME_1) %>% 
+  summarise(tons = sum(tons))
+
+#Without NAs
+
+x_map <- aqua %>% 
+  dplyr::filter(year == 2015 & type %in% c("cage", "floating cage net")) %>% 
+  select(NAME_1, type, tons) %>% 
+  group_by(NAME_1) %>% 
+  summarise(tons = sum(tons, na.rm = T)) %>% 
+  ungroup()
+
+#join to spatial data
+
+area_map <- left_join(indo, area_map)
+brack_intensity_map <- left_join(indo, brack_intensity_map)
+marine_intensity_map <- left_join(indo, marine_intensity_map)
+prod_map <- left_join(indo, prod_map)
+x_map <- left_join(indo, x_map)
+
+```
+###Visuals
+```{r maps}
+ggplot(area_map) +
+  geom_sf(aes(key = NAME_1, fill = area_hectares)) +
+  scale_fill_viridis(option = "D", labels = comma, direction = -1) +
+  guides(fill = guide_colorbar(barwidth = 20,
+                               barheight = 0.5,
+                               title = "Hectares",
+                               title.position = "top")) +
+  labs(title = "Area of brackish water pond aquaculture in 2015") +
+  theme_minimal() +
+  theme(legend.position = 'bottom')
+```
+
+**Figure 1.** The extent of brackish pond aquaculture (hectares) for each province in 2015. Both Banten and Jawa Barat have relatively high amounts of area under production, with the mxaimum national values occurring in Kalimantan Timur and Sulawesi Tengah. 
+
+&nbsp;
+
+
+
+```{r}
+ggplot(brack_intensity_map) +
+  geom_sf(aes(fill = tons_per_ha)) +
+  scale_fill_viridis(breaks = seq(from = 0, to = 40, by = 5), option = "A", direction = -1, begin = 0.2) +
+  guides(fill = guide_colorbar(barwidth = 20,
+                               barheight = 0.5,
+                               title = "Tons per hectare",
+                               title.position = "top")) +
+  labs(title = "Intensity of brackish water pond aquaculture in 2015") +
+  theme_minimal() +
+  theme(legend.position = 'bottom')
+
+```
+
+**Figure 2.** Provincial intenisty of brackish pond aquaculutre (tons/hectare) for 2015. Jawa Timur is highlighted as having more intensive production than Banten or Jawa Barat.
+
+&nbsp;
+
+```{r}
+ggplot(marine_intensity_map) +
+  geom_sf(aes(fill = tons_per_ha)) +
+  scale_fill_viridis(breaks = seq(from = 0, to = 2000, by = 250), option = "A", direction = -1, begin = 0.2) +
+  guides(fill = guide_colorbar(barwidth = 20,
+                               barheight = 0.5,
+                               title = "Tons per hectare",
+                               title.position = "top")) +
+  labs(title = "Intensity of marine culture production in 2015") +
+  theme_minimal() +
+  theme(legend.position = 'bottom')
+```
+
+**Figure 3.** The amount of marine culture production per unit area (tons/hectare) in 2015 for each province. Papua Barat is shown to have high intensity marine aquaculture with an annual production of nearly 2,000 tons per hectare.
+&nbsp;
+
+```{r}
+ggplot(x_map) +
+  geom_sf(aes(key = NAME_1, fill = tons)) +
+  scale_fill_viridis(option = "B", labels = comma, direction = -1, begin = 0.2) +
+  guides(fill = guide_colorbar(barwidth = 20,
+                               barheight = 0.5,
+                               title = "Tons",
+                               title.position = "top")) +
+  labs(title = "Production of raft/cage aquaculture in 2015") +
+  theme_minimal() +
+  theme(legend.position = 'bottom')
+```
+
+**Figure 4.** The amount of cage and raft aquaculture production in tons for 2015. At almost 20,000 tons, Jawa Barat produces over twice as much biomass as the next hightest provinces: Sumatera Barat, Jambi, and Sumatera Utara.  
+
+&nbsp;
+
+####*Notes*:
+During our data exploration, we encountered a few abnormalities. For example, the below figure displays the area used in brackish pond aquaculture for three provinces. All three timeseries demonstrate sharp increases or decreases in 2012. It is possible that there is a historical explanation for this (e.g. disease outbreak). Else, it may be a data reporting error.
+
+
+```{r, fig.height= 5, fig.width= 9}
+area_plot <- aqua %>% 
+  filter(province %in% c('Jawa Barat', 'Jawa Timur', 'Banten')) %>% 
+  filter(type %in% c('brackish pond')) %>% 
+  mutate(Province = province) %>% 
+  ggplot(aes(x = as.integer(year), y = area_hectares, color = Province)) +
+  geom_line()+labs(title = "Extent of brackish pond aquaculture", y = "Area (ha)", x = "Year")+scale_x_continuous(breaks = seq(2005,2015,1))+theme_classic()
+area_plot
+```
+
+
