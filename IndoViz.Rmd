@@ -70,7 +70,7 @@ perc_change_map <- left_join(indo, perc_change_map)
 ```{r}
 ggplot(area_map) +
   geom_sf(aes(key = NAME_1, fill = area_hectares)) +
-  scale_fill_viridis(option = "D", labels = comma) +
+  scale_fill_viridis(option = "D", labels = comma, direction = -1) +
   guides(fill = guide_colorbar(barwidth = 20,
                                barheight = 0.5,
                                title = "Hectares",
@@ -85,7 +85,7 @@ ggplot(area_map) +
 ```{r}
 ggplot(tons_map) +
   geom_sf(aes(key = NAME_1, fill = tons)) +
-  scale_fill_viridis(option = "D", labels = comma) +
+  scale_fill_viridis(option = "D", labels = comma, direction = -1) +
   guides(fill = guide_colorbar(barwidth = 20,
                                barheight = 0.5,
                                title = "Tons",
@@ -100,7 +100,7 @@ ggplot(tons_map) +
 ```{r}
 ggplot(intensity_map) +
   geom_sf(aes(fill = tons_per_ha)) +
-  scale_fill_viridis(breaks = seq(from = 0, to = 40, by = 5), option = "D") +
+  scale_fill_viridis(breaks = seq(from = 0, to = 40, by = 5), option = "D", direction = -1) +
   guides(fill = guide_colorbar(barwidth = 20,
                                barheight = 0.5,
                                title = "Tons per hectare",
@@ -115,7 +115,7 @@ ggplot(intensity_map) +
 ```{r}
 ggplot(perc_change_map) +
   geom_sf(aes(fill = three_yr_avg_a)) +
-  scale_fill_viridis(option = "C") +
+  scale_fill_viridis(option = "C", direction = -1) +
   guides(fill = guide_colorbar(barwidth = 20,
                                barheight = 0.5,
                                title = "% change (3 yr average)",
@@ -130,7 +130,7 @@ ggplot(perc_change_map) +
 ```{r}
 ggplot(perc_change_map) +
   geom_sf(aes(fill = three_yr_avg_i)) +
-  scale_fill_viridis(option = "C") +
+  scale_fill_viridis(option = "C", direction = -1) +
   guides(fill = guide_colorbar(barwidth = 20,
                                barheight = 0.5,
                                title = "% change (3 yr average)",
@@ -145,18 +145,47 @@ ggplot(perc_change_map) +
 ## Production and Area Plots
 
 ```{r}
-aqua %>% 
-  filter(province %in% c('Jawa Barat', 'Jawa Tengah', 'Jawa Timur', 'Banten')) %>% 
-  filter(type == 'brackish pond') %>% 
+area_plot <- aqua %>% 
+  filter(province %in% c('Jawa Barat', 'Jawa Timur', 'Banten', 'Papua Barat')) %>% 
+  filter(type %in% c('brackish pond','marine culture')) %>% 
   ggplot(aes(x = as.integer(year), y = area_hectares, color = province)) +
-  geom_line()
+  geom_line()+theme_classic()+labs(x = "Year", y = "Area (ha)")+scale_x_continuous(breaks = c(2005,2010,2015))+facet_wrap(~type, scales = "free")
+area_plot
 ```
 
 ```{r}
-aqua %>% 
-  filter(province %in% c('Papua Barat')) %>% 
-  filter(type %in% c('marine culture')) %>% 
-  ggplot(aes(x = as.integer(year), y = tons, color = type)) +
-  geom_line() +
-  facet_wrap(~type)
+prod_plot <- aqua %>% 
+  filter(province %in% c('Jawa Barat', 'Jawa Timur', 'Banten', 'Papua Barat')) %>% 
+  filter(type %in% c('brackish pond','marine culture')) %>% 
+  ggplot(aes(x = as.integer(year), y = tons, color = province)) +
+  geom_line()+theme_classic()+labs(x = "Year", y = "Production (tons)")+scale_x_continuous(breaks = c(2005,2010,2015))+facet_wrap(~type)
+prod_plot
+
 ```
+
+
+```{r}
+ints_plot <- aqua %>% 
+  filter(province %in% c('Jawa Barat', 'Jawa Timur', 'Banten', 'Papua Barat')) %>% 
+  filter(type %in% c('brackish pond','marine culture')) %>% 
+  ggplot(aes(x = as.integer(year), y = tons_per_ha, color = province)) +
+  geom_line()+theme_classic()+labs(x = "Year", y = "Intensity (tons/ha)")+scale_x_continuous(breaks = c(2005,2010,2015))+facet_wrap(~type, scales = "free")
+ints_plot
+```
+
+```{r}
+all_area_plot <- aqua %>% 
+  filter (type %in% c('brackish pond')) %>% 
+  ggplot(aes(x = as.integer(year), y = area_hectares))+
+  geom_line() + theme_classic() + facet_wrap(~province, scales = "free")
+all_area_plot
+```
+
+```{r}
+all_prod_plot <- aqua %>% 
+  filter (type %in% c('brackish pond')) %>% 
+  ggplot(aes(x = as.integer(year), y = tons))+
+  geom_line() + theme_classic() + facet_wrap(~province, scales = "free")
+all_prod_plot
+```
+
