@@ -1,6 +1,5 @@
 ---
 title: "Indonesian Aquaculture Data Visualization"
-author: "UCSB"
 output: html_document
 ---
 
@@ -11,7 +10,15 @@ knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 
 ###Purpose
 
-As part of our work towards Activity 3, we have have begun to examine the spatial patterns and trends in the Indonesian aquaculture statistics. We have prepared several visuals to give our colleagues an idea of the types of figures that could be included in the Indonesia-specific section of the whitepaper. We welcome any thoughts or feedback and also hope to get a sense for how well the data align with stakeholders' perceptions of the aquaculture industry.  
+As part of our work towards Activity 3, we are examining the spatial patterns and trends in the Indonesian aquaculture statistics. We have prepared several visuals to give our colleagues an idea of what types of figures could be used in the technical whitepaper. Based on previous discussions, we have tried to draw attention to four provinces of interest: Banten, Jawa Barat, Jawa Timur, and Papua Barat. General thoughts and feedback are welcome. In particular, we hope to gauge how well these figures could be used to support case studies that are relevant to the grander themes and management issues of Indonesian aquaculture.
+
+For example, some management discussions that these visuals could potentially complement include:  
+
+* proper siting and spatial management of extensive brackish pond aquaculture  
+* the regional intensification of brackish pond aquaculture and associated environmental concerns
+* managing the development of low area, high intensity marine aquaculture production
+
+
 
 ```{r setup, include = F}
 library(tidyverse)
@@ -54,10 +61,10 @@ brack_intensity_map <- aqua %>%
   select(NAME_1, tons_per_ha) %>% 
   mutate(tons_per_ha = ifelse(tons_per_ha > 1000, NA, tons_per_ha))
 
-# Intensity of Marine culture
-marine_intensity_map <- aqua %>% 
+# Area of Marine culture
+marine_area_map <- aqua %>% 
   dplyr::filter(year == 2015 & type == 'marine culture') %>% 
-  select(NAME_1, tons_per_ha)
+  select(NAME_1, area_hectares)
 
 #Production of cage/raft aquaculture
 
@@ -81,12 +88,13 @@ x_map <- aqua %>%
 
 area_map <- left_join(indo, area_map)
 brack_intensity_map <- left_join(indo, brack_intensity_map)
-marine_intensity_map <- left_join(indo, marine_intensity_map)
+marine_area_map <- left_join(indo, marine_area_map)
 prod_map <- left_join(indo, prod_map)
 x_map <- left_join(indo, x_map)
 
 ```
-###Visuals
+###Visuals  
+*Note: Provinces in gray either represent missing or suspect values. For example, Jawa Tengah was calculated to have an intensity above 1000 tons per hectare for brackish pond aquaculture in 2015 (two orders of magnitude higher than the next highest province).*
 ```{r maps}
 ggplot(area_map) +
   geom_sf(aes(key = NAME_1, fill = area_hectares)) +
@@ -95,12 +103,12 @@ ggplot(area_map) +
                                barheight = 0.5,
                                title = "Hectares",
                                title.position = "top")) +
-  labs(title = "Area of brackish water pond aquaculture in 2015") +
+  labs(title = "Area of brackish pond aquaculture in 2015") +
   theme_minimal() +
   theme(legend.position = 'bottom')
 ```
 
-**Figure 1.** The extent of brackish pond aquaculture (hectares) for each province in 2015. Both Banten and Jawa Barat have relatively high amounts of area under production, with the mxaimum national values occurring in Kalimantan Timur and Sulawesi Tengah. 
+**Figure 1.** The extent of brackish pond aquaculture (hectares) for each province in 2015. Both Banten and Jawa Barat have relatively high amounts of area under production, with the maximum national values occurring in Kalimantan Timur and Sulawesi Tengah. 
 
 &nbsp;
 
@@ -114,30 +122,31 @@ ggplot(brack_intensity_map) +
                                barheight = 0.5,
                                title = "Tons per hectare",
                                title.position = "top")) +
-  labs(title = "Intensity of brackish water pond aquaculture in 2015") +
+  labs(title = "Intensity of brackish pond aquaculture in 2015") +
   theme_minimal() +
   theme(legend.position = 'bottom')
 
 ```
 
-**Figure 2.** Provincial intenisty of brackish pond aquaculutre (tons/hectare) for 2015. Jawa Timur is highlighted as having more intensive production than Banten or Jawa Barat.
+**Figure 2.** Provincial intensity of brackish pond aquaculture (tons/hectare) for 2015. Jawa Timur is highlighted as having more intensive production than Banten or Jawa Barat.
 
 &nbsp;
 
 ```{r}
-ggplot(marine_intensity_map) +
-  geom_sf(aes(fill = tons_per_ha)) +
-  scale_fill_viridis(breaks = seq(from = 0, to = 2000, by = 250), option = "A", direction = -1, begin = 0.2) +
+ggplot(marine_area_map) +
+  geom_sf(aes(fill = area_hectares)) +
+  scale_fill_viridis(breaks = seq(from = 0, to = 50000, by = 10000), option = "D", direction = -1) +
   guides(fill = guide_colorbar(barwidth = 20,
                                barheight = 0.5,
-                               title = "Tons per hectare",
+                               title = "Hectares",
                                title.position = "top")) +
-  labs(title = "Intensity of marine culture production in 2015") +
+  labs(title = "Area of marine culture production in 2015") +
   theme_minimal() +
   theme(legend.position = 'bottom')
 ```
 
-**Figure 3.** The amount of marine culture production per unit area (tons/hectare) in 2015 for each province. Papua Barat is shown to have high intensity marine aquaculture with an annual production of nearly 2,000 tons per hectare.
+**Figure 3.** The area (hectares) dedicated to marine culture production (believed to be seaweed) in 2015 for each province. Compared to brackish pond aquaculture, marine culture is also quite extensive in Sulawesi Tengah but takes up less than half the total area throughout Indonesia.  
+
 &nbsp;
 
 ```{r}
@@ -153,12 +162,12 @@ ggplot(x_map) +
   theme(legend.position = 'bottom')
 ```
 
-**Figure 4.** The amount of cage and raft aquaculture production in tons for 2015. At almost 20,000 tons, Jawa Barat produces over twice as much biomass as the next hightest provinces: Sumatera Barat, Jambi, and Sumatera Utara.  
+**Figure 4.** The amount of cage and raft aquaculture production in tons for 2015. At almost 20,000 tons, Jawa Barat produces over twice as much biomass as the next highest provinces: Sumatera Barat, Jambi, and Sumatera Utara.  
 
 &nbsp;
 
 ####*Notes*:
-During our data exploration, we encountered a few abnormalities. For example, the below figure displays the area used in brackish pond aquaculture for three provinces. All three timeseries demonstrate sharp increases or decreases in 2012. It is possible that there is a historical explanation for this (e.g. disease outbreak). Else, it may be a data reporting error.
+During our data exploration, we encountered a few surprising results. For example, the below figure displays the area used in brackish pond aquaculture for three provinces from 2005 to 2015. All three time series demonstrate either a sharp increase or decrease in 2012. Is it possible that there is a historical explanation for this (e.g. disease outbreak)? Else, it could potentially indicate a data reporting error.
 
 
 ```{r, fig.height= 5, fig.width= 9}
